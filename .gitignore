@@ -1,0 +1,14 @@
+# Dataset gốc - không push lên git
+data/archive/images/
+data/archive/
+
+# File model đã train (tuỳ chọn - xem phần dưới)
+models/*.pkl
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
