@@ -11,6 +11,8 @@ from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input
 from tensorflow.keras.layers import GlobalMaxPool2D
 from tensorflow.keras.preprocessing import image as keras_image
 
+import pandas as pd
+
 
 BASE_DIR = Path(__file__).resolve().parent
 MODELS_DIR = BASE_DIR / "models"
@@ -19,6 +21,7 @@ UPLOAD_DIR = BASE_DIR / "uploads"
 IMAGE_FEATURES_PATH = MODELS_DIR / "Images_features.pkl"
 FILENAMES_PATH = MODELS_DIR / "filenames.pkl"
 
+STYLES_PATH = BASE_DIR / "data" / "archive" / "styles.csv"
 
 def load_artifacts() -> tuple:
     image_features = MODELS_DIR / "Images_features.pkl"
@@ -84,3 +87,26 @@ def get_recommendations(uploaded_file, model, neighbors, filenames, top_k=6):
     _, indices = neighbors.kneighbors([input_img_features])
     recommended = [filenames[idx] for idx in indices[0][1:top_k]]
     return save_path, recommended
+
+
+def load_styles():
+    if not STYLES_PATH.exists():
+        return None
+    df = pd.read_csv(STYLES_PATH, on_bad_lines="skip")
+    df["id"] = df["id"].astype(str)
+    return df.set_index("id")
+
+
+def get_product_info(image_path, styles_df):
+    if styles_df is None:
+        return None
+    product_id = Path(image_path).stem  # "1163.jpg" -> "1163"
+    if product_id not in styles_df.index:
+        return None
+    row = styles_df.loc[product_id]
+    return {
+        "name": row.get("productDisplayName", "N/A"),
+        "category": row.get("articleType", "N/A"),
+        "color": row.get("baseColour", "N/A"),
+        "usage": row.get("usage", "N/A"),
+    }
