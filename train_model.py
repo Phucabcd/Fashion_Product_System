@@ -1,123 +1,89 @@
-import joblib
+import pandas as pd
 import numpy as np
 from pathlib import Path
-
-from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input
-from tensorflow.keras.layers import GlobalMaxPool2D
-from tensorflow.keras.preprocessing import image
-
+from sklearn.linear_model import LogisticRegression
 
 BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data" / "archive"
 
-DATASET_DIR = BASE_DIR / "data" / "archive" / "images"
-MODELS_DIR = BASE_DIR / "models"
+TRAIN_CSV = DATA_DIR / "fashion-mnist_train.csv"
+TEST_CSV = DATA_DIR / "fashion-mnist_test.csv"
 
-FEATURES_PATH = MODELS_DIR / "Images_features.pkl"
-FILENAMES_PATH = MODELS_DIR / "filenames.pkl"
+def load_data():
+    train_df = pd.read_csv(TRAIN_CSV)
+    test_df = pd.read_csv(TEST_CSV)
+
+    # 1. Tách label
+    y_train = train_df["label"].to_numpy()
+    y_test = test_df["label"].to_numpy()
+
+    # 2. Tách pixel
+    x_train = train_df.drop(columns=["label"]).to_numpy()
+    x_test = test_df.drop(columns=["label"]).to_numpy()
+
+    # 3. Reshape 784 pixel → 28 × 28
+    x_train = x_train.reshape(-1, 28, 28)
+    x_test = x_test.reshape(-1, 28, 28)
+
+    # 4. Normalize 0-255 → 0-1
+    x_train = x_train.astype("float32") / 255.0
+    x_test = x_test.astype("float32") / 255.0
+
+    print("X_train:", x_train.shape)
+    print("y_train:", y_train.shape)
+
+    print("X_test:", x_test.shape)
+    print("y_test:", y_test.shape)
+
+    print("Pixel min:", x_train.min())
+    print("Pixel max:", x_train.max())
+
+    return (x_train, y_train), (x_test, y_test)
 
 
-image_extensions = {".jpg", ".jpeg", ".png", ".webp"}
+#dataset Fashion mnist đã train và test nên không cần train_test_split
+def train_baseline(x_train, y_train, x_test, y_test):
+    # 28 x 28 → 784
+    x_train_flat = x_train.reshape(len(x_train), -1)
+    x_test_flat = x_test.reshape(len(x_test), -1)
 
-image_paths = [
-    path
-    for path in DATASET_DIR.rglob("*")
-    if path.is_file() and path.suffix.lower() in image_extensions
-]
+    print("X_train_flat:", x_train_flat.shape)
+    print("X_test_flat:", x_test_flat.shape)
 
-print(f"Dataset path: {DATASET_DIR}")
-print(f"Found {len(image_paths)} images")
-
-
-def build_model():
-    base_model = ResNet50(
-        weights="imagenet",
-        include_top=False,
-        input_shape=(224, 224, 3)
+    clf = LogisticRegression(
+        max_iter=200,
     )
 
-    base_model.trainable = False
+    clf.fit(x_train_flat, y_train)
 
-    return __import__("tensorflow").keras.models.Sequential([
-        base_model,
-        GlobalMaxPool2D()
-    ])
+    acc = clf.score(x_test_flat, y_test)
 
+    print(f"[Baseline] Test accuracy: {acc:.4f}")
 
-def extract_features(image_path, model):
-    img = image.load_img(
-        image_path,
-        target_size=(224, 224)
-    )
-
-    img_array = image.img_to_array(img)
-
-    img_array = np.expand_dims(img_array, axis=0)
-
-    img_array = preprocess_input(img_array)
-
-    feature = model.predict(
-        img_array,
-        verbose=0
-    ).flatten()
-
-    feature = feature / np.linalg.norm(feature)
-
-    return feature
+    return clf, acc
 
 
-def train():
-    MODELS_DIR.mkdir(exist_ok=True)
+def train_cnn(x_train, y_train, x_test, y_test):
+    x_train_cnn = x_train[..., np.newaxis]
+    x_test_cnn = x_test[..., np.newaxis]
 
-    model = build_model()
-
-    features = []
-    filenames = []
-
-    image_extensions = {".jpg", ".jpeg", ".png", ".webp"}
-
-    image_paths = [
-        path
-        for path in DATASET_DIR.rglob("*")
-        if path.suffix.lower() in image_extensions
-    ]
-
-    print(f"Found {len(image_paths)} images")
-
-    for i, image_path in enumerate(image_paths):
-
-        try:
-            feature = extract_features(
-                image_path,
-                model
-            )
-
-            features.append(feature)
-            filenames.append(str(image_path))
-
-            print(
-                f"[{i + 1}/{len(image_paths)}] "
-                f"{image_path.name}"
-            )
-
-        except Exception as e:
-            print(f"Skip {image_path}: {e}")
-
-    features = np.array(features)
-
-    joblib.dump(
-        features,
-        FEATURES_PATH
-    )
-
-    joblib.dump(
-        filenames,
-        FILENAMES_PATH
-    )
-
-    print("Done!")
-    print(f"Features: {FEATURES_PATH}")
-    print(f"Filenames: {FILENAMES_PATH}")
+    print("CNN X_train:", x_train_cnn.shape)
+    print("CNN X_test:", x_test_cnn.shape)
 
 
 if __name__ == "__main__":
-    train()
+    (x_train, y_train), (x_test, y_test) = load_data()
+
+    model, accuracy = train_baseline(
+        x_train,
+        y_train,
+        x_test,
+        y_test
+    )
+
+    train_cnn(
+        x_train,
+        y_train,
+        x_test,
+        y_test
+    )
