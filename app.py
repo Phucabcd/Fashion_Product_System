@@ -1,29 +1,47 @@
 import streamlit as st
+import numpy as np
 
-from recommender import build_model, build_neighbors, get_recommendations, load_artifacts, load_styles, get_product_info
+from PIL import Image
+from predict import predict, CLASS_NAMES
 
-st.set_page_config(page_title="Fashion Recommendation System", layout="wide")
-st.header("Fashion Recommendation System")
+st.set_page_config(page_title="Fashion-MNIST Classifier", layout="centered")
+st.title("👕 Fashion-MNIST Classifier")
+st.write("Upload một ảnh trang phục (grayscale, hoặc màu cũng được) để model dự đoán.")
 
-image_features, filenames = load_artifacts()
-model = build_model()
-neighbors = build_neighbors(image_features)
-styles_df = load_styles()
+# --- Sidebar: chọn model ---
+model_type = st.segmented_control(
+    "Chọn model",
+    options=["cnn", "baseline"],
+    format_func=lambda x: "CNN" if x == "cnn" else "Baseline",
+    default="cnn"
+)
 
-upload_file = st.file_uploader("Upload Image")
+# --- Upload ảnh ---
+uploaded_file = st.file_uploader("Chọn ảnh", type=["png", "jpg", "jpeg"])
 
-if upload_file is not None:
-    saved_path, recommended_images = get_recommendations(upload_file, model, neighbors, filenames)
+if uploaded_file is not None:
+    # Đọc ảnh, chuyển sang grayscale
+    image = Image.open(uploaded_file).convert("L")
+    image_array = np.array(image)
 
-    st.subheader("Uploaded Image")
-    st.image(saved_path)
+    col1, col2 = st.columns([4, 8])
 
-    st.subheader("Recommended Images")
-    cols = st.columns(5)
-    for col, image_path in zip(cols, recommended_images):
-        with col:
-            st.image(image_path)
-            info = get_product_info(image_path, styles_df)
-            if info:
-                st.markdown(f"**{info['name']}**")
-                st.caption(f"{info['category']} · {info['color']}")
+    with col1:
+        st.image(image, caption="Ảnh gốc", width=100)
+
+    # --- Predict ---
+    label, proba = predict(image_array, model_type=model_type)
+
+    with col2:
+        st.subheader("Kết quả dự đoán")
+        st.metric(label="Nhãn", value=label)
+        st.metric(label="Độ tin cậy", value=f"{proba.max() * 100:.1f}%")
+
+    # --- Biểu đồ xác suất từng lớp ---
+    st.subheader("Xác suất theo từng lớp")
+
+    proba_dict = {name: float(p) for name, p in zip(CLASS_NAMES, proba)}
+    st.bar_chart(proba_dict)
+
+else:
+    st.info("Vui lòng upload 1 ảnh để bắt đầu dự đoán.")
