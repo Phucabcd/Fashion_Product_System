@@ -1,20 +1,23 @@
 import pandas as pd
 import numpy as np
+import joblib
+import tensorflow as tf
+
 from pathlib import Path
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from tensorflow.keras import layers, models
-import tensorflow as tf
 from sklearn.model_selection import train_test_split
-import joblib
+from sklearn.preprocessing import StandardScaler
+
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data" / "archive"
-
+MODEL_DIR = BASE_DIR / "models"
 TRAIN_CSV = DATA_DIR / "fashion-mnist_train.csv"
 TEST_CSV = DATA_DIR / "fashion-mnist_test.csv"
 
-SAVE_DIR = "outputs"
+
 
 def load_data():
     train_df = pd.read_csv(TRAIN_CSV)
@@ -45,12 +48,25 @@ def train_baseline(x_train, y_train, x_test, y_test):
     x_train_flat = x_train.reshape(len(x_train), -1)        # Chuyển lại dạng 784 ban đầu 
     x_test_flat = x_test.reshape(len(x_test), -1)           # Vì baseline sẽ xử lí ở dạng (n_samples, n_features)
 
-    clf = LogisticRegression(max_iter=200)                  # Giới hạn số vòng lập (mặc định của max_iter=100)
+
+    #   # Thêm bước scale
+    # scaler = StandardScaler()
+    # x_train_scaled = scaler.fit_transform(x_train_flat)   # fit + transform trên train
+    # x_test_scaled = scaler.transform(x_test_flat)          # CHỈ transform trên test (không fit lại)
+
+
+    clf = LogisticRegression(max_iter=500)                  # Giới hạn số vòng lập (mặc định của max_iter=100)
     clf.fit(x_train_flat, y_train)
     y_predict = clf.predict(x_test_flat)                    # Lưu ở X flat dễ nhầm lẫn 
     acc = accuracy_score(y_test, y_predict)
 
+
     print(f"[Baseline] Test accuracy: {acc:.4f}")
+    
+    joblib.dump(clf, MODEL_DIR / "baseline_model.pkl")
+    # joblib.dump(scaler, MODEL_DIR / "baseline_scaler.pkl")
+    print("Đã lưu model: baseline_model.pkl")
+    
     return clf, acc
  
 def build_cnn():
@@ -117,10 +133,10 @@ def train_cnn(x_train, y_train, x_test, y_test):
     test_loss, test_acc = model.evaluate(x_test_cnn, y_test)
     print(f"[CNN] Test accuracy: {test_acc:.4f}")
 
-    model.save("outputs/cnn_model.keras")
+    model.save(MODEL_DIR / "cnn_model.keras")
     print("Đã lưu model: cnn_model.keras")
 
-    joblib.dump(train_history.history, "outputs/cnn_history.joblib")
+    joblib.dump(train_history.history, MODEL_DIR / "cnn_history.joblib")
     print("Đã lưu history: cnn_history.joblib")
 
     return model, train_history, test_acc
@@ -131,6 +147,6 @@ if __name__ == "__main__":
 
     baseline_model, baseline_acc = train_baseline(x_train, y_train, x_test, y_test)
 
-    cnn_model, history, cnn_acc = train_cnn(x_train, y_train, x_test, y_test)
+    # cnn_model, history, cnn_acc = train_cnn(x_train, y_train, x_test, y_test)
 
-    print(f"\n[So sánh] Baseline: {baseline_acc:.4f} | CNN: {cnn_acc:.4f}")
+    # print(f"\n[So sánh] Baseline: {baseline_acc:.4f} | CNN: {cnn_acc:.4f}")
