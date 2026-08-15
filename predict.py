@@ -1,6 +1,7 @@
 import numpy as np
 import joblib
 
+from PIL import Image
 from pathlib import Path
 from tensorflow.keras.models import load_model
 
@@ -16,6 +17,7 @@ CLASS_NAMES = [
 baseline_model = joblib.load(MODEL_DIR / "baseline_model.pkl")
 cnn_model = load_model(MODEL_DIR / "cnn_model.keras")
 # baseline_scaler = joblib.load(MODEL_DIR / "baseline_scaler.pkl")
+
 
 def preprocess_image(image: np.ndarray) -> np.ndarray:
     """

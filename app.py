@@ -9,10 +9,11 @@ st.title("👕 Fashion-MNIST Classifier")
 st.write("Upload một ảnh trang phục (grayscale, hoặc màu cũng được) để model dự đoán.")
 
 # --- Sidebar: chọn model ---
-model_type = st.sidebar.radio(
+model_type = st.segmented_control(
     "Chọn model",
     options=["cnn", "baseline"],
-    format_func=lambda x: "CNN" if x == "cnn" else "Baseline (Logistic Regression)"
+    format_func=lambda x: "CNN" if x == "cnn" else "Baseline",
+    default="cnn"
 )
 
 # --- Upload ảnh ---
@@ -23,10 +24,10 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("L")
     image_array = np.array(image)
 
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([4, 8])
 
     with col1:
-        st.image(image, caption="Ảnh gốc", width=200)
+        st.image(image, caption="Ảnh gốc", width=100)
 
     # --- Predict ---
     label, proba = predict(image_array, model_type=model_type)
