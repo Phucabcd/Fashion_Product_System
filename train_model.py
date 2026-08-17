@@ -147,6 +147,6 @@ if __name__ == "__main__":
 
     baseline_model, baseline_acc = train_baseline(x_train, y_train, x_test, y_test)
 
-    # cnn_model, history, cnn_acc = train_cnn(x_train, y_train, x_test, y_test)
+    cnn_model, history, cnn_acc = train_cnn(x_train, y_train, x_test, y_test)
 
-    # print(f"\n[So sánh] Baseline: {baseline_acc:.4f} | CNN: {cnn_acc:.4f}")
+    print(f"\n[So sánh] Baseline: {baseline_acc:.4f} | CNN: {cnn_acc:.4f}")
