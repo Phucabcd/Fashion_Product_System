@@ -42,6 +42,41 @@ Fashion_Recom_Model/
 
 ---
 
+## 🔄 Luồng Dữ liệu & Kiến trúc Pipeline
+
+Sơ đồ dưới đây mô tả toàn bộ luồng xử lý dữ liệu và huấn luyện mô hình trong project:
+
+```
+DATA (fashion-mnist_train.csv / fashion-mnist_test.csv)
+│
+│  load_data(): tách label/pixel, reshape (N,28,28), normalize [0,1]
+│
+┌────────┴────────┐
+↓                 ↓
+Baseline          Custom CNN
+Logistic          2 block Conv2D (32→64)
+Regression        + BatchNorm
+(flatten          + MaxPooling
+784 features)     + Dropout
+                  + Dense(256)
+                  + Dense(10, softmax)
+│                 │
+│                 │  train/val split (90/10, stratified)
+│                 │  EarlyStopping + ReduceLROnPlateau
+│                 │
+↓                 ↓
+Test Accuracy     Test Accuracy
+│                 │
+└────────┬────────┘
+         ↓
+      SO SÁNH
+  (evaluate.py)
+```
+
+> **Lưu ý**: MobileNetV2 (Transfer Learning) chạy trên pipeline riêng biệt qua `train_transfer_model.py`, với bước preprocess resize 28×28 → 96×96 và chuyển Grayscale → RGB trước khi đưa vào Base Model.
+
+---
+
 ## 📊 Dataset & Các Lớp Nhãn
 
 - **Tập dữ liệu**: Fashion-MNIST (Kaggle / Zalando Research)
